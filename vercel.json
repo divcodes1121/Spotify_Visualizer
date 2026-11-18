@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node tools/vercel-build.js",
+  "outputDirectory": "public",
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/api/media", "destination": "/media/manifest.json" },
+    { "source": "/callback", "destination": "/index.html" }
+  ],
+  "headers": [
+    { "source": "/media/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/media/manifest.json", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
+  ]
+}

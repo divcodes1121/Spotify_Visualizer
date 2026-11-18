@@ -1,0 +1,17 @@
+{
+  "name": "aura-spotify-visual-player",
+  "version": "1.0.0",
+  "description": "A local, fully customizable fullscreen visual player for your Spotify library: album-art colors, synced lyrics, visualizers.",
+  "private": true,
+  "license": "MIT",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js --open",
+    "serve": "node server.js",
+    "media": "node tools/generate-test-media.js",
+    "videos": "node tools/generate-test-videos.js"
+  }
+}
