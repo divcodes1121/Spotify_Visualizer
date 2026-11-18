@@ -4,7 +4,11 @@
 let mediaPromise = null;
 export function loadMedia(force = false) {
   if (!mediaPromise || force) {
-    mediaPromise = fetch('/api/media').then((r) => r.json()).catch(() => ({ images: [], videos: [], audio: [], tracks: [] }));
+    const get = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    // /api/media on the local server; /media/manifest.json is the static copy made for hosted builds.
+    mediaPromise = get('/api/media')
+      .catch(() => get('/media/manifest.json'))
+      .catch(() => ({ images: [], videos: [], audio: [], tracks: [] }));
   }
   return mediaPromise;
 }

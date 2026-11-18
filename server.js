@@ -21,6 +21,7 @@ const HOST = '127.0.0.1';
 const ORIGIN = `http://${HOST}:${PORT}`;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MEDIA_DIR = path.join(__dirname, 'test-media');
+const ON_VERCEL = !!process.env.VERCEL;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -58,7 +59,11 @@ async function serveFile(req, res, file) {
   try { stat = await fsp.stat(file); } catch { return false; }
   if (!stat.isFile()) return false;
   const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
-  const base = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache' };
+  // Locally: always fresh. On Vercel: let the CDN cache files (each deployment gets its own cache).
+  const cache = !ON_VERCEL ? 'no-cache'
+    : file.startsWith(MEDIA_DIR) ? 'public, max-age=86400, s-maxage=604800'
+      : 'public, max-age=0, s-maxage=86400, must-revalidate';
+  const base = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': cache };
   const range = req.headers.range;
   if (range) {
     const m = /bytes=(\d*)-(\d*)/.exec(range);
@@ -124,7 +129,8 @@ const server = http.createServer(async (req, res) => {
     let pathname;
     try { pathname = decodeURIComponent(url.pathname); } catch { return send(res, 400, 'bad path'); }
 
-    if (pathname === '/api/media') return handleMedia(res);
+    // /media/manifest.json is what vercel.json rewrites /api/media to, so answer both.
+    if (pathname === '/api/media' || pathname === '/media/manifest.json') return handleMedia(res);
     if (pathname === '/api/lyrics') return handleLyrics(res, url.searchParams);
     if (pathname === '/api/img') return handleImg(res, url.searchParams);
 
