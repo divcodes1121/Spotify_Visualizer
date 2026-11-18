@@ -207,21 +207,40 @@ export class Visuals {
       }
     }
 
-    if (s.edgeLights && s.edgeLights !== 'off' && (s.ledGlow ?? 60) > 0) {
-      ctx.globalCompositeOperation = 'lighter';
-      const K = 56;
-      const reach = Math.min(W, H) * 0.11 * ((s.ledGlow ?? 60) / 100);
-      for (let k = 0; k < K; k++) {
-        const u = (k + 0.5) / K;
-        const [c, b] = this.ledColor(u, t, lvl);
-        if (b < 0.03) continue;
-        const [px, py] = rectPoint(u, 0, 0, W, H);
-        const g = ctx.createRadialGradient(px, py, 0, px, py, reach);
-        g.addColorStop(0, rgba(c, Math.min(0.5, 0.38 * b)));
-        g.addColorStop(0.45, rgba(c, Math.min(0.2, 0.12 * b)));
+    if (s.edgeLights && s.edgeLights !== 'off' && (s.ledGlow ?? 85) > 0) {
+      this.drawEdgeGlow(ctx, W, H, t, lvl, Math.min(W, H) * 0.14 * ((s.ledGlow ?? 85) / 100));
+    }
+  }
+
+  /*
+   * Edge light as one continuous band: each side is cut into thin slices that sit edge-to-edge,
+   * each fading inward with its own color, so there are no blobs or dots — just a smooth wash of
+   * light that flows around the corners.
+   */
+  drawEdgeGlow(ctx, W, H, t, lvl, reach) {
+    ctx.globalCompositeOperation = 'screen';
+    const P = 2 * (W + H);
+    const slice = 5; // glow-canvas px per slice (~14 screen px), blurred together by CSS
+    const sides = [
+      { len: W, start: 0, rect: (a, b) => [a, 0, b - a, reach], grad: (a) => [a, 0, a, reach] },
+      { len: H, start: W, rect: (a, b) => [W - reach, a, reach, b - a], grad: (a) => [W, a, W - reach, a] },
+      { len: W, start: W + H, rect: (a, b) => [W - b, H - reach, b - a, reach], grad: (a) => [W - a, H, W - a, H - reach] },
+      { len: H, start: 2 * W + H, rect: (a, b) => [0, H - b, reach, b - a], grad: (a) => [0, H - a, reach, H - a] },
+    ];
+    for (const side of sides) {
+      const n = Math.max(1, Math.ceil(side.len / slice));
+      for (let j = 0; j < n; j++) {
+        const a = (j * side.len) / n, b2 = ((j + 1) * side.len) / n;
+        const [c, br] = this.ledColor((side.start + (a + b2) / 2) / P, t, lvl);
+        if (br < 0.03) continue;
+        const [gx0, gy0, gx1, gy1] = side.grad(a);
+        const g = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+        g.addColorStop(0, rgba(c, Math.min(0.7, 0.56 * br)));
+        g.addColorStop(0.35, rgba(c, Math.min(0.28, 0.2 * br)));
         g.addColorStop(1, rgba(c, 0));
         ctx.fillStyle = g;
-        ctx.fillRect(px - reach, py - reach, reach * 2, reach * 2);
+        const [rx, ry, rw, rh] = side.rect(a, b2);
+        ctx.fillRect(rx, ry, rw + 0.6, rh + 0.6); // tiny overlap hides seams
       }
     }
   }
@@ -233,26 +252,23 @@ export class Visuals {
     const th = (s.ledThickness ?? 3) * this.dpr;
     if (th <= 0) return;
     const K = 200;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
-    for (let pass = 0; pass < 2; pass++) {
-      ctx.lineWidth = pass ? th : th * 3;
-      for (let k = 0; k < K; k++) {
-        const u0 = k / K, u1 = (k + 1) / K;
-        const [c, b] = this.ledColor((u0 + u1) / 2, t, bass);
-        if (b < 0.03) continue;
-        const [x0, y0] = rectPoint(u0, th / 2, th / 2, W - th, H - th);
-        const [x1, y1] = rectPoint(u1, th / 2, th / 2, W - th, H - th);
-        ctx.strokeStyle = pass
-          ? rgba(mixRGB(c, [255, 255, 255], 0.25), Math.min(0.9, b * 0.9))
-          : rgba(c, Math.min(0.2, b * 0.13));
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.stroke();
-      }
-    }
+    // One pass, flat ends, no additive blending: segments meet edge-to-edge as a continuous line
+    // (round caps + additive overlap is what made the old strip look like a row of dots).
     ctx.globalCompositeOperation = 'source-over';
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = th;
+    for (let k = 0; k < K; k++) {
+      const u0 = k / K, u1 = (k + 1) / K;
+      const [c, b] = this.ledColor((u0 + u1) / 2, t, bass);
+      if (b < 0.03) continue;
+      const [x0, y0] = rectPoint(u0, th / 2, th / 2, W - th, H - th);
+      const [x1, y1] = rectPoint(u1, th / 2, th / 2, W - th, H - th);
+      ctx.strokeStyle = rgba(mixRGB(c, [255, 255, 255], 0.2), Math.min(0.85, b * 0.85));
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
   }
 
   setPalette(p) {

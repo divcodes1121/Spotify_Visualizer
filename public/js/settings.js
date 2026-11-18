@@ -45,8 +45,8 @@ export const DEFAULTS = {
   edgeLights: 'flow',
   ledSpeed: 1,
   ledBrightness: 80,
-  ledThickness: 3,
-  ledGlow: 75,
+  ledThickness: 0, // 0 = lights only (no visible strip line)
+  ledGlow: 85,
 
   // background
   background: 'room',
@@ -115,7 +115,7 @@ export const SCHEMA = [
       ['chase', 'Chase: light comets race around'], ['breathe', 'Breathe: pulses with the beat'], ['rainbow', 'Spectrum: full rainbow cycle']) },
     { key: 'ledSpeed', type: 'range', label: 'Speed', min: 0, max: 4, step: 0.1, unit: '×', when: (s) => s.edgeLights !== 'off' },
     { key: 'ledBrightness', type: 'range', label: 'Brightness', min: 20, max: 200, step: 5, unit: '%', when: (s) => s.edgeLights !== 'off' },
-    { key: 'ledThickness', type: 'range', label: 'Strip thickness', min: 0, max: 16, step: 1, unit: 'px', when: (s) => s.edgeLights !== 'off' },
+    { key: 'ledThickness', type: 'range', label: 'Visible strip line (0 = lights only)', min: 0, max: 12, step: 1, unit: 'px', when: (s) => s.edgeLights !== 'off' },
     { key: 'ledGlow', type: 'range', label: 'Glow spill into the screen', min: 0, max: 250, step: 5, unit: '%', when: (s) => s.edgeLights !== 'off' },
   ] },
   { tab: 'Look', title: 'Glass', items: [
@@ -205,7 +205,7 @@ export const SCHEMA = [
 export const PRESETS = {
   Ambilight: {},
   'LED Party': {
-    edgeLights: 'chase', ledSpeed: 2, ledBrightness: 115, ledThickness: 5, ledGlow: 100, ambiStrength: 95,
+    edgeLights: 'chase', ledSpeed: 2, ledBrightness: 115, ledGlow: 110, ambiStrength: 95,
     visualizer: 'mirror', vizHeight: 10, reactivity: 170, lyricsStyle: 'karaoke', lyricsFont: 'Unbounded', lyricsSize: 34,
   },
   Fluid: {
@@ -250,8 +250,11 @@ const listeners = new Set();
 let data = { ...DEFAULTS };
 
 // When defaults are re-tuned, these keys are reset once for people who already have saved settings.
-const VERSION = 3;
-const MIGRATIONS = { 3: ['ambiStrength', 'ledBrightness', 'ledThickness', 'ledGlow', 'videoDim'] };
+const VERSION = 4;
+const MIGRATIONS = {
+  3: ['ambiStrength', 'ledBrightness', 'ledThickness', 'ledGlow', 'videoDim'],
+  4: ['ledThickness', 'ledGlow'],
+};
 
 export const Settings = {
   load() {
